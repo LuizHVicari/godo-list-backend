@@ -2,12 +2,17 @@ package project
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/luizhvicari/backend/internal/auth"
+	platformHTTP "github.com/luizhvicari/backend/internal/platform/http"
+)
+
+var errMapper = platformHTTP.NewErrorMapper(
+	platformHTTP.E(ErrorProjectNotFound, http.StatusNotFound, ErrorProjectNotFound.Error()),
+	platformHTTP.E(ErrorInvalidFilterParams, http.StatusBadRequest, ErrorInvalidFilterParams.Error()),
 )
 
 type service interface {
@@ -53,13 +58,12 @@ func (h *Handler) Create(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	err := h.service.CreateProject(c.Request.Context(), CreateProjectParams{
+	if err := h.service.CreateProject(c.Request.Context(), CreateProjectParams{
 		Name:        req.Name,
 		Description: req.Description,
 		OwnerID:     session.UserId,
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create project"})
+	}); err != nil {
+		errMapper.Respond(c, err, "failed to create project")
 		return
 	}
 
@@ -96,12 +100,8 @@ func (h *Handler) List(c *gin.Context) {
 		Limit:     req.Limit,
 		Offset:    req.Offset,
 	})
-	if errors.Is(err, ErrorInvalidFilterParams) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list projects"})
+		errMapper.Respond(c, err, "failed to list projects")
 		return
 	}
 
@@ -134,12 +134,8 @@ func (h *Handler) GetByID(c *gin.Context) {
 	session := c.MustGet("session").(*auth.Session)
 
 	project, err := h.service.GetProjectById(c.Request.Context(), id, session.UserId)
-	if errors.Is(err, ErrorProjectNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
-		return
-	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get project"})
+		errMapper.Respond(c, err, "failed to get project")
 		return
 	}
 
@@ -173,16 +169,11 @@ func (h *Handler) Update(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	err = h.service.UpdateProject(c.Request.Context(), id, session.UserId, UpdateProjectParams{
+	if err := h.service.UpdateProject(c.Request.Context(), id, session.UserId, UpdateProjectParams{
 		Name:        req.Name,
 		Description: req.Description,
-	})
-	if errors.Is(err, ErrorProjectNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update project"})
+	}); err != nil {
+		errMapper.Respond(c, err, "failed to update project")
 		return
 	}
 
@@ -207,13 +198,8 @@ func (h *Handler) Delete(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	err = h.service.DeleteProject(c.Request.Context(), id, session.UserId)
-	if errors.Is(err, ErrorProjectNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete project"})
+	if err := h.service.DeleteProject(c.Request.Context(), id, session.UserId); err != nil {
+		errMapper.Respond(c, err, "failed to delete project")
 		return
 	}
 

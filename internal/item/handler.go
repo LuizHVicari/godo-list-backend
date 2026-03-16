@@ -2,12 +2,19 @@ package item
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/luizhvicari/backend/internal/auth"
+	platformHTTP "github.com/luizhvicari/backend/internal/platform/http"
+)
+
+var errMapper = platformHTTP.NewErrorMapper(
+	platformHTTP.E(ErrorItemNotFound, http.StatusNotFound, ErrorItemNotFound.Error()),
+	platformHTTP.E(ErrorInvalidFilterParams, http.StatusBadRequest, ErrorInvalidFilterParams.Error()),
+	platformHTTP.E(ErrorItemPositionTaken, http.StatusConflict, ErrorItemPositionTaken.Error()),
+	platformHTTP.E(ErrorItemNotBelongsToStep, http.StatusUnprocessableEntity, ErrorItemNotBelongsToStep.Error()),
 )
 
 type service interface {
@@ -65,24 +72,15 @@ func (h *Handler) Create(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	err = h.service.CreateItem(c.Request.Context(), CreateItemParams{
+	if err := h.service.CreateItem(c.Request.Context(), CreateItemParams{
 		StepID:      stepID,
 		OwnerID:     session.UserId,
 		Name:        req.Name,
 		Description: req.Description,
 		Priority:    req.Priority,
 		Position:    req.Position,
-	})
-	if errors.Is(err, ErrorItemNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "step not found"})
-		return
-	}
-	if errors.Is(err, ErrorItemPositionTaken) {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create item"})
+	}); err != nil {
+		errMapper.Respond(c, err, "failed to create item")
 		return
 	}
 
@@ -128,16 +126,8 @@ func (h *Handler) List(c *gin.Context) {
 		Limit:     req.Limit,
 		Offset:    req.Offset,
 	})
-	if errors.Is(err, ErrorItemNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "step not found"})
-		return
-	}
-	if errors.Is(err, ErrorInvalidFilterParams) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list items"})
+		errMapper.Respond(c, err, "failed to list items")
 		return
 	}
 
@@ -178,12 +168,8 @@ func (h *Handler) GetByID(c *gin.Context) {
 	session := c.MustGet("session").(*auth.Session)
 
 	item, err := h.service.GetItemByID(c.Request.Context(), id, stepID, session.UserId)
-	if errors.Is(err, ErrorItemNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "item not found"})
-		return
-	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get item"})
+		errMapper.Respond(c, err, "failed to get item")
 		return
 	}
 
@@ -226,23 +212,14 @@ func (h *Handler) Update(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	err = h.service.UpdateItem(c.Request.Context(), id, stepID, session.UserId, UpdateItemParams{
+	if err := h.service.UpdateItem(c.Request.Context(), id, stepID, session.UserId, UpdateItemParams{
 		Name:        req.Name,
 		Description: req.Description,
 		Priority:    req.Priority,
 		Position:    req.Position,
 		IsCompleted: req.IsCompleted,
-	})
-	if errors.Is(err, ErrorItemNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "item not found"})
-		return
-	}
-	if errors.Is(err, ErrorItemPositionTaken) {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update item"})
+	}); err != nil {
+		errMapper.Respond(c, err, "failed to update item")
 		return
 	}
 
@@ -276,13 +253,8 @@ func (h *Handler) Delete(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	err = h.service.DeleteItem(c.Request.Context(), id, stepID, session.UserId)
-	if errors.Is(err, ErrorItemNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "item not found"})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete item"})
+	if err := h.service.DeleteItem(c.Request.Context(), id, stepID, session.UserId); err != nil {
+		errMapper.Respond(c, err, "failed to delete item")
 		return
 	}
 
@@ -328,21 +300,12 @@ func (h *Handler) Reposition(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	err = h.service.RepositionItems(c.Request.Context(), RepositionItemsParams{
+	if err := h.service.RepositionItems(c.Request.Context(), RepositionItemsParams{
 		StepID:  stepID,
 		OwnerID: session.UserId,
 		Items:   items,
-	})
-	if errors.Is(err, ErrorItemNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "step not found"})
-		return
-	}
-	if errors.Is(err, ErrorItemNotBelongsToStep) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "one or more items do not belong to this step"})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reposition items"})
+	}); err != nil {
+		errMapper.Respond(c, err, "failed to reposition items")
 		return
 	}
 
