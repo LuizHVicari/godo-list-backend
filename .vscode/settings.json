@@ -1,0 +1,19 @@
+{
+  "cSpell.words": [
+    "DBSTRING",
+    "godotenv",
+    "joho",
+    "PGPASSWORD",
+    "pressly",
+    "sqlc",
+    "SSLMODE"
+  ],
+  "editor.tabSize": 4,
+  "[json]": {
+    "editor.quickSuggestions": {
+      "strings": true
+    },
+    "editor.suggest.insertMode": "replace",
+    "editor.tabSize": 2
+  }
+}

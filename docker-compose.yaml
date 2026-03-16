@@ -1,0 +1,30 @@
+services:
+
+    database:
+        image: postgres:18
+        environment:
+            POSTGRES_USER: ${DB_USER}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+            POSTGRES_DB: ${DB_NAME}
+        ports:
+            - "${DB_PORT}:5432"
+        volumes:
+            - db_data:/var/lib/postgresql
+        healthcheck:
+            test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    cache:
+        image: redis:7
+        ports:
+            - "${CACHE_PORT}:6379"
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5 
+
+volumes:
+    db_data:    
