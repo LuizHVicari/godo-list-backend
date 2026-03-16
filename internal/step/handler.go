@@ -7,14 +7,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/luizhvicari/backend/internal/auth"
 )
 
 type service interface {
 	CreateStep(ctx context.Context, params CreateStepParams) error
-	GetStepByID(ctx context.Context, id, projectID uuid.UUID) (*Step, error)
-	UpdateStep(ctx context.Context, id, projectID uuid.UUID, params UpdateStepParams) error
-	DeleteStep(ctx context.Context, id, projectID uuid.UUID) error
-	ListStepsByProjectID(ctx context.Context, projectID uuid.UUID, filter ListStepsFilter) (*ListStepsResult, error)
+	GetStepByID(ctx context.Context, id, projectID, ownerID uuid.UUID) (*Step, error)
+	UpdateStep(ctx context.Context, id, projectID, ownerID uuid.UUID, params UpdateStepParams) error
+	DeleteStep(ctx context.Context, id, projectID, ownerID uuid.UUID) error
+	ListStepsByProjectID(ctx context.Context, projectID, ownerID uuid.UUID, filter ListStepsFilter) (*ListStepsResult, error)
 	RepositionSteps(ctx context.Context, params RepositionStepsParams) error
 }
 
@@ -29,9 +30,9 @@ func NewHandler(service service) *Handler {
 func (h *Handler) Register(rg *gin.RouterGroup) {
 	rg.POST("", h.Create)
 	rg.GET("", h.List)
-	rg.GET("/:id", h.GetByID)
-	rg.PUT("/:id", h.Update)
-	rg.DELETE("/:id", h.Delete)
+	rg.GET("/:step_id", h.GetByID)
+	rg.PUT("/:step_id", h.Update)
+	rg.DELETE("/:step_id", h.Delete)
 	rg.PUT("/reposition", h.Reposition)
 }
 
@@ -44,6 +45,7 @@ func (h *Handler) Register(rg *gin.RouterGroup) {
 // @Success 201
 // @Failure 400
 // @Failure 401
+// @Failure 404
 // @Failure 500
 // @Router /v1/projects/{project_id}/steps [post]
 func (h *Handler) Create(c *gin.Context) {
@@ -59,11 +61,22 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	session := c.MustGet("session").(*auth.Session)
+
 	err = h.service.CreateStep(c.Request.Context(), CreateStepParams{
 		ProjectID: projectID,
+		OwnerID:   session.UserId,
 		Name:      req.Name,
 		Position:  req.Position,
 	})
+	if errors.Is(err, ErrorStepNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+		return
+	}
+	if errors.Is(err, ErrorStepPositionTaken) {
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create step"})
 		return
@@ -85,6 +98,7 @@ func (h *Handler) Create(c *gin.Context) {
 // @Success 200 {object} ListStepsResponse
 // @Failure 400
 // @Failure 401
+// @Failure 404
 // @Failure 500
 // @Router /v1/projects/{project_id}/steps [get]
 func (h *Handler) List(c *gin.Context) {
@@ -100,13 +114,19 @@ func (h *Handler) List(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ListStepsByProjectID(c.Request.Context(), projectID, ListStepsFilter{
+	session := c.MustGet("session").(*auth.Session)
+
+	result, err := h.service.ListStepsByProjectID(c.Request.Context(), projectID, session.UserId, ListStepsFilter{
 		Name:      req.Name,
 		Sort:      req.Sort,
 		Direction: req.Direction,
 		Limit:     req.Limit,
 		Offset:    req.Offset,
 	})
+	if errors.Is(err, ErrorStepNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+		return
+	}
 	if errors.Is(err, ErrorInvalidFilterParams) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -143,13 +163,15 @@ func (h *Handler) GetByID(c *gin.Context) {
 		return
 	}
 
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("step_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid step id"})
 		return
 	}
 
-	step, err := h.service.GetStepByID(c.Request.Context(), id, projectID)
+	session := c.MustGet("session").(*auth.Session)
+
+	step, err := h.service.GetStepByID(c.Request.Context(), id, projectID, session.UserId)
 	if errors.Is(err, ErrorStepNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "step not found"})
 		return
@@ -182,7 +204,7 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("step_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid step id"})
 		return
@@ -194,13 +216,19 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	err = h.service.UpdateStep(c.Request.Context(), id, projectID, UpdateStepParams{
+	session := c.MustGet("session").(*auth.Session)
+
+	err = h.service.UpdateStep(c.Request.Context(), id, projectID, session.UserId, UpdateStepParams{
 		Name:        req.Name,
 		Position:    req.Position,
 		IsCompleted: req.IsCompleted,
 	})
 	if errors.Is(err, ErrorStepNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "step not found"})
+		return
+	}
+	if errors.Is(err, ErrorStepPositionTaken) {
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 	if err != nil {
@@ -219,6 +247,7 @@ func (h *Handler) Update(c *gin.Context) {
 // @Success 204
 // @Failure 400
 // @Failure 401
+// @Failure 404
 // @Failure 500
 // @Router /v1/projects/{project_id}/steps/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
@@ -228,13 +257,15 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("step_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid step id"})
 		return
 	}
 
-	err = h.service.DeleteStep(c.Request.Context(), id, projectID)
+	session := c.MustGet("session").(*auth.Session)
+
+	err = h.service.DeleteStep(c.Request.Context(), id, projectID, session.UserId)
 	if errors.Is(err, ErrorStepNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "step not found"})
 		return
@@ -256,6 +287,7 @@ func (h *Handler) Delete(c *gin.Context) {
 // @Success 204
 // @Failure 400
 // @Failure 401
+// @Failure 404
 // @Failure 422 {object} map[string]string
 // @Failure 500
 // @Router /v1/projects/{project_id}/steps/reposition [put]
@@ -282,10 +314,17 @@ func (h *Handler) Reposition(c *gin.Context) {
 		steps[i] = StepReposition{ID: id, Position: s.Position}
 	}
 
+	session := c.MustGet("session").(*auth.Session)
+
 	err = h.service.RepositionSteps(c.Request.Context(), RepositionStepsParams{
 		ProjectID: projectID,
+		OwnerID:   session.UserId,
 		Steps:     steps,
 	})
+	if errors.Is(err, ErrorStepNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+		return
+	}
 	if errors.Is(err, ErrorStepNotBelongsToProject) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "one or more steps do not belong to this project"})
 		return
@@ -297,4 +336,3 @@ func (h *Handler) Reposition(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
-

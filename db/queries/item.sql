@@ -1,21 +1,21 @@
--- name: CreateStep :exec
-INSERT INTO todo.steps
-    (id, project_id, name, position, is_completed, created_at, updated_at)
+-- name: CreateItem :exec
+INSERT INTO todo.items
+    (id, step_id, name, description, priority, position, is_completed, created_at, updated_at)
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7);
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
--- name: GetStepByID :one
-SELECT * FROM todo.steps WHERE id = $1;
+-- name: GetItemByID :one
+SELECT * FROM todo.items WHERE id = $1;
 
--- name: CountStepsByProjectID :one
-SELECT COUNT(*) FROM todo.steps
-WHERE project_id = $1
+-- name: CountItemsByStepID :one
+SELECT COUNT(*) FROM todo.items
+WHERE step_id = $1
   AND (sqlc.narg('name')::TEXT IS NULL
   OR name ILIKE '%' || sqlc.narg('name')::TEXT || '%');
 
--- name: ListStepsByProjectID :many
-SELECT * FROM todo.steps
-WHERE project_id = $1
+-- name: ListItemsByStepID :many
+SELECT * FROM todo.items
+WHERE step_id = $1
   AND (sqlc.narg('name')::TEXT IS NULL
   OR name ILIKE '%' || sqlc.narg('name')::TEXT || '%')
 ORDER BY
@@ -34,6 +34,11 @@ ORDER BY
     CASE WHEN sqlc.narg('sort')::TEXT = 'created_at'
             AND (sqlc.narg('direction')::TEXT = 'desc'
             OR sqlc.narg('direction')::TEXT IS NULL)   THEN created_at END DESC,
+    CASE WHEN sqlc.narg('sort')::TEXT = 'priority'
+            AND sqlc.narg('direction')::TEXT = 'asc'  THEN priority::TEXT END ASC,
+    CASE WHEN sqlc.narg('sort')::TEXT = 'priority'
+            AND (sqlc.narg('direction')::TEXT = 'desc'
+            OR sqlc.narg('direction')::TEXT IS NULL)   THEN priority::TEXT END DESC,
     CASE WHEN (sqlc.narg('sort')::TEXT = 'position' OR sqlc.narg('sort')::TEXT IS NULL)
             AND sqlc.narg('direction')::TEXT = 'desc' THEN position END DESC,
     CASE WHEN (sqlc.narg('sort')::TEXT = 'position' OR sqlc.narg('sort')::TEXT IS NULL)
@@ -42,31 +47,35 @@ ORDER BY
 LIMIT sqlc.narg('limit')::INT
 OFFSET sqlc.narg('offset')::INT;
 
--- name: IsProjectOwnedByUser :one
+-- name: IsStepInOwnedProject :one
 SELECT EXISTS(
-    SELECT 1 FROM todo.projects WHERE id = $1 AND owner_id = $2
+    SELECT 1 FROM todo.steps s
+    JOIN todo.projects p ON p.id = s.project_id
+    WHERE s.id = $1 AND p.owner_id = $2
 ) AS owned;
 
--- name: GetLastStepPositionByProjectID :one
-SELECT COALESCE(MAX(position), 0)::INT FROM todo.steps WHERE project_id = $1;
+-- name: GetLastItemPositionByStepID :one
+SELECT COALESCE(MAX(position), 0)::INT FROM todo.items WHERE step_id = $1;
 
--- name: IsStepPositionTaken :one
+-- name: IsItemPositionTaken :one
 SELECT EXISTS(
-    SELECT 1 FROM todo.steps
-    WHERE project_id = $1 AND position = $2
+    SELECT 1 FROM todo.items
+    WHERE step_id = $1 AND position = $2
       AND (sqlc.narg('exclude_id')::UUID IS NULL OR id != sqlc.narg('exclude_id')::UUID)
 ) AS taken;
 
--- name: UpdateStepPositionByID :execresult
-UPDATE todo.steps SET position = $3, updated_at = $4 WHERE id = $1 AND project_id = $2;
+-- name: UpdateItemPositionByID :execresult
+UPDATE todo.items SET position = $3, updated_at = $4 WHERE id = $1 AND step_id = $2;
 
--- name: UpdateStepByID :exec
-UPDATE todo.steps SET
+-- name: UpdateItemByID :exec
+UPDATE todo.items SET
     name = $2,
-    position = $3,
-    is_completed = $4,
-    updated_at = $5
+    description = $3,
+    priority = $4,
+    position = $5,
+    is_completed = $6,
+    updated_at = $7
 WHERE id = $1;
 
--- name: DeleteStepByID :exec
-DELETE FROM todo.steps WHERE id = $1;
+-- name: DeleteItemByID :exec
+DELETE FROM todo.items WHERE id = $1;

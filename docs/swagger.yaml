@@ -21,6 +21,99 @@ definitions:
     - email
     - password
     type: object
+  item.CreateItemRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      position:
+        type: integer
+      priority:
+        $ref: '#/definitions/item.ItemPriority'
+    required:
+    - name
+    type: object
+  item.ItemPriority:
+    enum:
+    - none
+    - low
+    - medium
+    - high
+    - critical
+    type: string
+    x-enum-varnames:
+    - ItemPriorityNone
+    - ItemPriorityLow
+    - ItemPriorityMedium
+    - ItemPriorityHigh
+    - ItemPriorityCritical
+  item.ItemRepositionItem:
+    properties:
+      id:
+        type: string
+      position:
+        type: integer
+    required:
+    - id
+    - position
+    type: object
+  item.ItemResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_completed:
+        type: boolean
+      name:
+        type: string
+      position:
+        type: integer
+      priority:
+        $ref: '#/definitions/item.ItemPriority'
+      step_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  item.ListItemsResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/item.ItemResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  item.RepositionItemsRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/item.ItemRepositionItem'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  item.UpdateItemRequest:
+    properties:
+      description:
+        type: string
+      is_completed:
+        type: boolean
+      name:
+        type: string
+      position:
+        type: integer
+      priority:
+        $ref: '#/definitions/item.ItemPriority'
+    required:
+    - name
+    - position
+    type: object
   project.CreateProjectRequest:
     properties:
       description:
@@ -62,6 +155,73 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  step.CreateStepRequest:
+    properties:
+      name:
+        type: string
+      position:
+        type: integer
+    required:
+    - name
+    type: object
+  step.ListStepsResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/step.StepResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  step.RepositionStepsRequest:
+    properties:
+      steps:
+        items:
+          $ref: '#/definitions/step.StepRepositionItem'
+        minItems: 1
+        type: array
+    required:
+    - steps
+    type: object
+  step.StepRepositionItem:
+    properties:
+      id:
+        type: string
+      position:
+        type: integer
+    required:
+    - id
+    - position
+    type: object
+  step.StepResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      is_completed:
+        type: boolean
+      name:
+        type: string
+      position:
+        type: integer
+      project_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  step.UpdateStepRequest:
+    properties:
+      is_completed:
+        type: boolean
+      name:
+        type: string
+      position:
+        type: integer
+    required:
+    - name
+    - position
     type: object
 info:
   contact: {}
@@ -297,6 +457,444 @@ paths:
       summary: Update a project
       tags:
       - projects
+  /v1/projects/{project_id}/steps:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Filter by name
+        in: query
+        name: name
+        type: string
+      - description: 'Sort field: name, position, created_at, updated_at'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc, desc'
+        in: query
+        name: direction
+        type: string
+      - description: Max results
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/step.ListStepsResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: List steps for a project
+      tags:
+      - steps
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/step.CreateStepRequest'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Create a new step
+      tags:
+      - steps
+  /v1/projects/{project_id}/steps/{id}:
+    delete:
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Delete a step
+      tags:
+      - steps
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/step.StepResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Get a step by ID
+      tags:
+      - steps
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Step data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/step.UpdateStepRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Update a step
+      tags:
+      - steps
+  /v1/projects/{project_id}/steps/{step_id}/items:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: step_id
+        required: true
+        type: string
+      - description: Filter by name
+        in: query
+        name: name
+        type: string
+      - description: 'Sort field: name, position, priority, created_at, updated_at'
+        in: query
+        name: sort
+        type: string
+      - description: 'Sort direction: asc, desc'
+        in: query
+        name: direction
+        type: string
+      - description: Max results
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/item.ListItemsResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: List items for a step
+      tags:
+      - items
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: step_id
+        required: true
+        type: string
+      - description: Item data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/item.CreateItemRequest'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+      summary: Create a new item
+      tags:
+      - items
+  /v1/projects/{project_id}/steps/{step_id}/items/{id}:
+    delete:
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: step_id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Delete an item
+      tags:
+      - items
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: step_id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/item.ItemResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Get an item by ID
+      tags:
+      - items
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: step_id
+        required: true
+        type: string
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/item.UpdateItemRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+      summary: Update an item
+      tags:
+      - items
+  /v1/projects/{project_id}/steps/{step_id}/items/reposition:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Step ID
+        in: path
+        name: step_id
+        required: true
+        type: string
+      - description: Items with new positions
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/item.RepositionItemsRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+      summary: Reposition items within a step
+      tags:
+      - items
+  /v1/projects/{project_id}/steps/reposition:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Steps with new positions
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/step.RepositionStepsRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+      summary: Reposition steps within a project
+      tags:
+      - steps
 schemes:
 - http
 swagger: "2.0"

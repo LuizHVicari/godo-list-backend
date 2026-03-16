@@ -76,6 +76,7 @@ type StepReposition struct {
 
 type RepositionStepsParams struct {
 	ProjectID uuid.UUID
+	OwnerID   uuid.UUID
 	Steps     []StepReposition
 }
 
@@ -113,6 +114,25 @@ func (r *Repository) RepositionSteps(ctx context.Context, params RepositionSteps
 
 func (r *Repository) GetLastStepPositionByProjectID(ctx context.Context, projectID uuid.UUID) (int32, error) {
 	return r.queries.GetLastStepPositionByProjectID(ctx, projectID)
+}
+
+func (r *Repository) IsProjectOwnedByUser(ctx context.Context, projectID, ownerID uuid.UUID) (bool, error) {
+	return r.queries.IsProjectOwnedByUser(ctx, db.IsProjectOwnedByUserParams{
+		ID:      projectID,
+		OwnerID: ownerID,
+	})
+}
+
+func (r *Repository) IsStepPositionTaken(ctx context.Context, projectID uuid.UUID, position int32, excludeID *uuid.UUID) (bool, error) {
+	var nullID uuid.NullUUID
+	if excludeID != nil {
+		nullID = uuid.NullUUID{UUID: *excludeID, Valid: true}
+	}
+	return r.queries.IsStepPositionTaken(ctx, db.IsStepPositionTakenParams{
+		ProjectID: projectID,
+		Position:  position,
+		ExcludeID: nullID,
+	})
 }
 
 func (r *Repository) ListStepsByProjectID(ctx context.Context, projectID uuid.UUID, filter ListStepsFilter) (*ListStepsResult, error) {

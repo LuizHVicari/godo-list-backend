@@ -6,10 +6,57 @@ package db
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+type TodoItemPriority string
+
+const (
+	TodoItemPriorityNone     TodoItemPriority = "none"
+	TodoItemPriorityLow      TodoItemPriority = "low"
+	TodoItemPriorityMedium   TodoItemPriority = "medium"
+	TodoItemPriorityHigh     TodoItemPriority = "high"
+	TodoItemPriorityCritical TodoItemPriority = "critical"
+)
+
+func (e *TodoItemPriority) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TodoItemPriority(s)
+	case string:
+		*e = TodoItemPriority(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TodoItemPriority: %T", src)
+	}
+	return nil
+}
+
+type NullTodoItemPriority struct {
+	TodoItemPriority TodoItemPriority
+	Valid            bool // Valid is true if TodoItemPriority is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTodoItemPriority) Scan(value interface{}) error {
+	if value == nil {
+		ns.TodoItemPriority, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TodoItemPriority.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTodoItemPriority) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TodoItemPriority), nil
+}
 
 type AuthUser struct {
 	ID           uuid.UUID
@@ -24,6 +71,18 @@ type GooseDbVersion struct {
 	VersionID int64
 	IsApplied bool
 	Tstamp    time.Time
+}
+
+type TodoItem struct {
+	ID          uuid.UUID
+	StepID      uuid.UUID
+	Name        string
+	Description sql.NullString
+	Priority    TodoItemPriority
+	Position    int32
+	IsCompleted bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type TodoProject struct {

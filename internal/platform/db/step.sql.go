@@ -101,6 +101,45 @@ func (q *Queries) GetStepByID(ctx context.Context, id uuid.UUID) (TodoStep, erro
 	return i, err
 }
 
+const isProjectOwnedByUser = `-- name: IsProjectOwnedByUser :one
+SELECT EXISTS(
+    SELECT 1 FROM todo.projects WHERE id = $1 AND owner_id = $2
+) AS owned
+`
+
+type IsProjectOwnedByUserParams struct {
+	ID      uuid.UUID
+	OwnerID uuid.UUID
+}
+
+func (q *Queries) IsProjectOwnedByUser(ctx context.Context, arg IsProjectOwnedByUserParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isProjectOwnedByUser, arg.ID, arg.OwnerID)
+	var owned bool
+	err := row.Scan(&owned)
+	return owned, err
+}
+
+const isStepPositionTaken = `-- name: IsStepPositionTaken :one
+SELECT EXISTS(
+    SELECT 1 FROM todo.steps
+    WHERE project_id = $1 AND position = $2
+      AND ($3::UUID IS NULL OR id != $3::UUID)
+) AS taken
+`
+
+type IsStepPositionTakenParams struct {
+	ProjectID uuid.UUID
+	Position  int32
+	ExcludeID uuid.NullUUID
+}
+
+func (q *Queries) IsStepPositionTaken(ctx context.Context, arg IsStepPositionTakenParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isStepPositionTaken, arg.ProjectID, arg.Position, arg.ExcludeID)
+	var taken bool
+	err := row.Scan(&taken)
+	return taken, err
+}
+
 const listStepsByProjectID = `-- name: ListStepsByProjectID :many
 SELECT id, project_id, name, position, is_completed, created_at, updated_at FROM todo.steps
 WHERE project_id = $1
