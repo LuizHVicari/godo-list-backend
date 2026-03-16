@@ -48,5 +48,20 @@
   "go.alternateTools": {
     "customFormatter": "golangci-lint-v2"
   },
-  "go.formatFlags": ["fmt", "--stdin"]
+"go.formatFlags": [
+    "fmt",
+    "--stdin"
+],
+"sqltools.connections": [
+    {
+        "ssh": "Disabled",
+        "previewLimit": 50,
+        "server": "localhost",
+        "port": 5433,
+        "driver": "PostgreSQL",
+        "name": "godo",
+        "database": "godo",
+        "username": "godoBrOsmWSLo+qdpgvZZJ87c6c6XegMHvIGXngvTZ7uk3Q="
+    }
+]
 }

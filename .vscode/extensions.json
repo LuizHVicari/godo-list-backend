@@ -1,3 +1,7 @@
 {
-  "recommendations": ["golang.go", "mtxr.sqltools"]
+"recommendations": [
+    "golang.go",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg"
+]
 }

@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,4 +24,13 @@ type GooseDbVersion struct {
 	VersionID int64
 	IsApplied bool
 	Tstamp    time.Time
+}
+
+type TodoProject struct {
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	OwnerID     uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

@@ -14,10 +14,12 @@ type User struct {
 	UpdatedAt    time.Time
 }
 
-func NewUser(id uuid.UUID, email, passwordHash string) User {
+func NewUser(id uuid.UUID, email, passwordHash string, createdAt, updatedAt time.Time) User {
 	return User{
 		ID:           id,
 		Email:        email,
 		PasswordHash: passwordHash,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
 	}
 }

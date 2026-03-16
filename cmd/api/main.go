@@ -20,6 +20,7 @@ import (
 	"github.com/luizhvicari/backend/internal/platform/config"
 	"github.com/luizhvicari/backend/internal/platform/crypto"
 	platformDb "github.com/luizhvicari/backend/internal/platform/db"
+	"github.com/luizhvicari/backend/internal/project"
 	"github.com/luizhvicari/backend/internal/user"
 )
 
@@ -61,6 +62,7 @@ func main() {
 	}()
 
 	r := gin.New()
+	r.Use(gin.Recovery())
 	r.Use(platformHTTP.RequestLoggerMiddleware(logger))
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{envConfig.CorsAllowedOrigin},
@@ -84,8 +86,13 @@ func main() {
 
 	authHandler := auth.NewHandler(authService, envConfig.CookieSecure)
 
+	projectRepository := project.NewRepository(queries)
+	projectService := project.NewService(projectRepository)
+	projectHandler := project.NewHandler(projectService)
+
 	v1 := r.Group("/v1")
 	authHandler.Register(v1.Group("/auth"))
+	projectHandler.Register(v1.Group("/projects", auth.Middleware(authService)))
 
 	err = r.Run(":" + *port)
 	if err != nil {

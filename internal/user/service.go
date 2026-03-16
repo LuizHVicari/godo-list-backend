@@ -40,13 +40,7 @@ func (s *Service) CreateUser(ctx context.Context, email, password string) error 
 		return err
 	}
 
-	user := User{
-		Email:        email,
-		PasswordHash: hashedPassword,
-		ID:           userId,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-	}
+	user := NewUser(userId, email, hashedPassword, time.Now(), time.Now())
 
 	err = s.repository.CreateUser(ctx, user)
 	if err != nil {

@@ -51,7 +51,7 @@ dev-version:
 # Generates Swagger docs from code annotations.
 swagger-init:
     mkdir -p docs
-    go run github.com/swaggo/swag/cmd/swag@{{swag_version}} init -g main.go -d cmd/api,internal/auth,internal/platform/config -o docs
+    go run github.com/swaggo/swag/cmd/swag@{{swag_version}} init -g main.go -d cmd/api,internal -o docs
 
 # Formats Swagger annotations in Go files.
 swagger-fmt:
