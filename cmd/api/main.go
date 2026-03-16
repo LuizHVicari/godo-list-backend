@@ -42,14 +42,22 @@ func main() {
 		logger.Error("Unable to connect to database", "error", err)
 		return
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close database connection", "error", err)
+		}
+	}()
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     envConfig.CacheHost + ":" + strconv.Itoa(envConfig.CachePort),
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			logger.Error("failed to close redis connection", "error", err)
+		}
+	}()
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -77,7 +85,10 @@ func main() {
 	v1 := r.Group("/v1")
 	authHandler.Register(v1.Group("/auth"))
 
-	r.Run(":" + *port)
+	err = r.Run(":" + *port)
+	if err != nil {
+		logger.Error("Failed to start server", "error", err)
+	}
 
 }
 

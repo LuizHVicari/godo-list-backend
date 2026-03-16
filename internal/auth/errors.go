@@ -2,4 +2,4 @@ package auth
 
 import "errors"
 
-var ErrorSessionNotFound = errors.New("Session not found")
+var ErrorSessionNotFound = errors.New("session not found")

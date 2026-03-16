@@ -4,7 +4,7 @@ set dotenv-load
 sqlc_version := "v1.30.0"
 goose_version := "v3.27.0"
 air_version := "v1.61.7"
-golangci_lint_version := "v1.64.8"
+golangci_lint_version := "v2.10.1"
 swag_version := "v1.16.4"
 
 db_host := env_var_or_default("DB_HOST", "localhost")
@@ -30,14 +30,14 @@ vet:
 
 # Runs golangci-lint across the project.
 lint:
-    go run github.com/golangci/golangci-lint/cmd/golangci-lint@{{golangci_lint_version}} run ./...
+    go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{golangci_lint_version}} run ./...
 
 # Runs the standard local quality checks.
 check: vet lint test sqlc-verify
 
 # Prints the version of golangci-lint being used.
 lint-version:
-    go run github.com/golangci/golangci-lint/cmd/golangci-lint@{{golangci_lint_version}} version
+    go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{golangci_lint_version}} version
 
 # Runs the API with hot reload using Air.
 dev port="8080":

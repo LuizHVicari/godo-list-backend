@@ -40,5 +40,13 @@
     },
     "editor.suggest.insertMode": "replace",
     "editor.tabSize": 2
-  }
+  },
+  "go.diagnostic.vulncheck": "Off",
+  "go.lintTool": "golangci-lint-v2",
+  "go.lintFlags": ["--path-mode=abs", "--fast-only"],
+  "go.formatTool": "custom",
+  "go.alternateTools": {
+    "customFormatter": "golangci-lint-v2"
+  },
+  "go.formatFlags": ["fmt", "--stdin"]
 }

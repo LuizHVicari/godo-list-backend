@@ -75,7 +75,9 @@ func (s *Service) SignIn(ctx context.Context, email, password string) (*Session,
 	}
 	if err != nil && errors.Is(err, user.ErrorUserNotFound) {
 		// prevents user enumeration by not revealing that the email is not found
-		s.hasher.ComparePassword(fakePasswordHash, password)
+		// return is ignored since we don't care about the result, we just want to make sure it
+		// takes about the same time as a real password comparison
+		_, _ = s.hasher.ComparePassword(fakePasswordHash, password)
 		return nil, user.ErrorInvalidCredentials
 	}
 

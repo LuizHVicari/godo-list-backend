@@ -39,6 +39,7 @@ func (r *Repository) GetUserByEmail(ctx context.Context, email string) (*User, e
 	}
 
 	userEntity := modelToEntity(userModel)
+
 	return &userEntity, nil
 }
 
@@ -52,6 +53,7 @@ func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (*User, erro
 	}
 
 	userEntity := modelToEntity(userModel)
+
 	return &userEntity, nil
 }
 
