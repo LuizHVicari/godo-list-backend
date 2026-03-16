@@ -90,6 +90,21 @@ CREATE TABLE todo.projects (
 
 
 --
+-- Name: steps; Type: TABLE; Schema: todo; Owner: -
+--
+
+CREATE TABLE todo.steps (
+    id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    name text NOT NULL,
+    "position" integer NOT NULL,
+    is_completed boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: auth; Owner: -
 --
 
@@ -122,6 +137,22 @@ ALTER TABLE ONLY todo.projects
 
 
 --
+-- Name: steps steps_pkey; Type: CONSTRAINT; Schema: todo; Owner: -
+--
+
+ALTER TABLE ONLY todo.steps
+    ADD CONSTRAINT steps_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: steps steps_project_id_position_key; Type: CONSTRAINT; Schema: todo; Owner: -
+--
+
+ALTER TABLE ONLY todo.steps
+    ADD CONSTRAINT steps_project_id_position_key UNIQUE (project_id, "position");
+
+
+--
 -- Name: idx_projects_name; Type: INDEX; Schema: todo; Owner: -
 --
 
@@ -136,11 +167,26 @@ CREATE INDEX idx_projects_owner_id ON todo.projects USING btree (owner_id);
 
 
 --
+-- Name: idx_steps_project_id; Type: INDEX; Schema: todo; Owner: -
+--
+
+CREATE INDEX idx_steps_project_id ON todo.steps USING btree (project_id);
+
+
+--
 -- Name: projects projects_owner_id_fkey; Type: FK CONSTRAINT; Schema: todo; Owner: -
 --
 
 ALTER TABLE ONLY todo.projects
     ADD CONSTRAINT projects_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: steps steps_project_id_fkey; Type: FK CONSTRAINT; Schema: todo; Owner: -
+--
+
+ALTER TABLE ONLY todo.steps
+    ADD CONSTRAINT steps_project_id_fkey FOREIGN KEY (project_id) REFERENCES todo.projects(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

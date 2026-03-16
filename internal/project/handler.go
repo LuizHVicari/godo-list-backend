@@ -12,9 +12,9 @@ import (
 
 type service interface {
 	CreateProject(ctx context.Context, params CreateProjectParams) error
-	GetProjectById(ctx context.Context, id uuid.UUID) (*Project, error)
-	UpdateProject(ctx context.Context, id uuid.UUID, params UpdateProjectParams) error
-	DeleteProject(ctx context.Context, id uuid.UUID) error
+	GetProjectById(ctx context.Context, id, ownerID uuid.UUID) (*Project, error)
+	UpdateProject(ctx context.Context, id, ownerID uuid.UUID, params UpdateProjectParams) error
+	DeleteProject(ctx context.Context, id, ownerID uuid.UUID) error
 	ListProjectsByOwnerID(ctx context.Context, ownerID uuid.UUID, filter ListProjectsFilter) (*ListProjectsResult, error)
 }
 
@@ -29,9 +29,9 @@ func NewHandler(service service) *Handler {
 func (h *Handler) Register(rg *gin.RouterGroup) {
 	rg.POST("", h.Create)
 	rg.GET("", h.List)
-	rg.GET("/:id", h.GetByID)
-	rg.PUT("/:id", h.Update)
-	rg.DELETE("/:id", h.Delete)
+	rg.GET("/:project_id", h.GetByID)
+	rg.PUT("/:project_id", h.Update)
+	rg.DELETE("/:project_id", h.Delete)
 }
 
 // Create godoc
@@ -125,13 +125,15 @@ func (h *Handler) List(c *gin.Context) {
 // @Failure 500
 // @Router /v1/projects/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("project_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
 		return
 	}
 
-	project, err := h.service.GetProjectById(c.Request.Context(), id)
+	session := c.MustGet("session").(*auth.Session)
+
+	project, err := h.service.GetProjectById(c.Request.Context(), id, session.UserId)
 	if errors.Is(err, ErrorProjectNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
 		return
@@ -157,7 +159,7 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Failure 500
 // @Router /v1/projects/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("project_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
 		return
@@ -169,7 +171,9 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	err = h.service.UpdateProject(c.Request.Context(), id, UpdateProjectParams{
+	session := c.MustGet("session").(*auth.Session)
+
+	err = h.service.UpdateProject(c.Request.Context(), id, session.UserId, UpdateProjectParams{
 		Name:        req.Name,
 		Description: req.Description,
 	})
@@ -195,13 +199,19 @@ func (h *Handler) Update(c *gin.Context) {
 // @Failure 500
 // @Router /v1/projects/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("project_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
 		return
 	}
 
-	err = h.service.DeleteProject(c.Request.Context(), id)
+	session := c.MustGet("session").(*auth.Session)
+
+	err = h.service.DeleteProject(c.Request.Context(), id, session.UserId)
+	if errors.Is(err, ErrorProjectNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete project"})
 		return

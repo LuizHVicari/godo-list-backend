@@ -21,6 +21,7 @@ import (
 	"github.com/luizhvicari/backend/internal/platform/crypto"
 	platformDb "github.com/luizhvicari/backend/internal/platform/db"
 	"github.com/luizhvicari/backend/internal/project"
+	"github.com/luizhvicari/backend/internal/step"
 	"github.com/luizhvicari/backend/internal/user"
 )
 
@@ -90,9 +91,16 @@ func main() {
 	projectService := project.NewService(projectRepository)
 	projectHandler := project.NewHandler(projectService)
 
+	stepRepository := step.NewRepository(db, queries)
+	stepService := step.NewService(stepRepository)
+	stepHandler := step.NewHandler(stepService)
+
 	v1 := r.Group("/v1")
 	authHandler.Register(v1.Group("/auth"))
-	projectHandler.Register(v1.Group("/projects", auth.Middleware(authService)))
+
+	authed := v1.Group("", auth.Middleware(authService))
+	projectHandler.Register(authed.Group("/projects"))
+	stepHandler.Register(authed.Group("/projects/:project_id/steps"))
 
 	err = r.Run(":" + *port)
 	if err != nil {

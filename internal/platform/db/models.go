@@ -34,3 +34,13 @@ type TodoProject struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
+
+type TodoStep struct {
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Position    int32
+	IsCompleted bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}

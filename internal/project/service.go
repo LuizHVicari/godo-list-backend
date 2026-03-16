@@ -40,14 +40,24 @@ func (s *Service) CreateProject(ctx context.Context, params CreateProjectParams)
 	return s.repo.CreateProject(ctx, *project)
 }
 
-func (s *Service) GetProjectById(ctx context.Context, id uuid.UUID) (*Project, error) {
-	return s.repo.GetProjectById(ctx, id)
+func (s *Service) GetProjectById(ctx context.Context, id, ownerID uuid.UUID) (*Project, error) {
+	project, err := s.repo.GetProjectById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if project.OwnerID != ownerID {
+		return nil, ErrorProjectNotFound
+	}
+	return project, nil
 }
 
-func (s *Service) UpdateProject(ctx context.Context, id uuid.UUID, params UpdateProjectParams) error {
+func (s *Service) UpdateProject(ctx context.Context, id, ownerID uuid.UUID, params UpdateProjectParams) error {
 	project, err := s.repo.GetProjectById(ctx, id)
 	if err != nil {
 		return err
+	}
+	if project.OwnerID != ownerID {
+		return ErrorProjectNotFound
 	}
 	project.Name = params.Name
 	project.Description = params.Description
@@ -55,7 +65,14 @@ func (s *Service) UpdateProject(ctx context.Context, id uuid.UUID, params Update
 	return s.repo.UpdateProject(ctx, *project)
 }
 
-func (s *Service) DeleteProject(ctx context.Context, id uuid.UUID) error {
+func (s *Service) DeleteProject(ctx context.Context, id, ownerID uuid.UUID) error {
+	project, err := s.repo.GetProjectById(ctx, id)
+	if err != nil {
+		return err
+	}
+	if project.OwnerID != ownerID {
+		return ErrorProjectNotFound
+	}
 	return s.repo.DeleteProject(ctx, id)
 }
 
