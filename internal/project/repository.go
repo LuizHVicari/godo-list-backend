@@ -128,24 +128,6 @@ func (r *Repository) modelToEntity(projectModel db.TodoProject) *Project {
 	}
 }
 
-func (r *Repository) entityToModel(project *Project) db.TodoProject {
-	var description sql.NullString
-	if project.Description != nil {
-		description = sql.NullString{
-			String: *project.Description,
-			Valid:  true,
-		}
-	}
-
-	return db.TodoProject{
-		ID:          project.ID,
-		Name:        project.Name,
-		Description: description,
-		OwnerID:     project.OwnerID,
-		CreatedAt:   project.CreatedAt,
-		UpdatedAt:   project.UpdatedAt,
-	}
-}
 
 func ptrVal[T any](p *T) T {
 	if p == nil {

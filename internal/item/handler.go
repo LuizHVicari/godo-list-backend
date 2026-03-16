@@ -119,13 +119,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	result, err := h.service.ListItemsByStepID(c.Request.Context(), stepID, session.UserId, ListItemsFilter{
-		Name:      req.Name,
-		Sort:      req.Sort,
-		Direction: req.Direction,
-		Limit:     req.Limit,
-		Offset:    req.Offset,
-	})
+	result, err := h.service.ListItemsByStepID(c.Request.Context(), stepID, session.UserId, ListItemsFilter(req))
 	if err != nil {
 		errMapper.Respond(c, err, "failed to list items")
 		return
@@ -212,13 +206,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	if err := h.service.UpdateItem(c.Request.Context(), id, stepID, session.UserId, UpdateItemParams{
-		Name:        req.Name,
-		Description: req.Description,
-		Priority:    req.Priority,
-		Position:    req.Position,
-		IsCompleted: req.IsCompleted,
-	}); err != nil {
+	if err := h.service.UpdateItem(c.Request.Context(), id, stepID, session.UserId, UpdateItemParams(req)); err != nil {
 		errMapper.Respond(c, err, "failed to update item")
 		return
 	}

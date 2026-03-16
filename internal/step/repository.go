@@ -85,7 +85,7 @@ func (r *Repository) RepositionSteps(ctx context.Context, params RepositionSteps
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := r.queries.WithTx(tx)
 	now := time.Now()

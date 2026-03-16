@@ -89,7 +89,7 @@ func (r *Repository) RepositionItems(ctx context.Context, params RepositionItems
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := r.queries.WithTx(tx)
 	now := time.Now()

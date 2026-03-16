@@ -115,13 +115,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	result, err := h.service.ListStepsByProjectID(c.Request.Context(), projectID, session.UserId, ListStepsFilter{
-		Name:      req.Name,
-		Sort:      req.Sort,
-		Direction: req.Direction,
-		Limit:     req.Limit,
-		Offset:    req.Offset,
-	})
+	result, err := h.service.ListStepsByProjectID(c.Request.Context(), projectID, session.UserId, ListStepsFilter(req))
 	if err != nil {
 		errMapper.Respond(c, err, "failed to list steps")
 		return
@@ -206,11 +200,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	if err := h.service.UpdateStep(c.Request.Context(), id, projectID, session.UserId, UpdateStepParams{
-		Name:        req.Name,
-		Position:    req.Position,
-		IsCompleted: req.IsCompleted,
-	}); err != nil {
+	if err := h.service.UpdateStep(c.Request.Context(), id, projectID, session.UserId, UpdateStepParams(req)); err != nil {
 		errMapper.Respond(c, err, "failed to update step")
 		return
 	}

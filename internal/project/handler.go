@@ -93,13 +93,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	result, err := h.service.ListProjectsByOwnerID(c.Request.Context(), session.UserId, ListProjectsFilter{
-		Name:      req.Name,
-		Sort:      req.Sort,
-		Direction: req.Direction,
-		Limit:     req.Limit,
-		Offset:    req.Offset,
-	})
+	result, err := h.service.ListProjectsByOwnerID(c.Request.Context(), session.UserId, ListProjectsFilter(req))
 	if err != nil {
 		errMapper.Respond(c, err, "failed to list projects")
 		return
@@ -169,10 +163,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	if err := h.service.UpdateProject(c.Request.Context(), id, session.UserId, UpdateProjectParams{
-		Name:        req.Name,
-		Description: req.Description,
-	}); err != nil {
+	if err := h.service.UpdateProject(c.Request.Context(), id, session.UserId, UpdateProjectParams(req)); err != nil {
 		errMapper.Respond(c, err, "failed to update project")
 		return
 	}
