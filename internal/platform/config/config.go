@@ -17,6 +17,8 @@ type Config struct {
 	DatabaseSSLMode  string
 	CacheHost        string
 	CachePort        int
+	CookieSecure      bool
+	CorsAllowedOrigin string
 }
 
 func Load() Config {
@@ -34,6 +36,8 @@ func Load() Config {
 		DatabaseSSLMode:  os.Getenv("DB_SSLMODE"),
 		CacheHost:        os.Getenv("CACHE_HOST"),
 		CachePort:        mustAtoi("CACHE_PORT"),
+		CookieSecure:      os.Getenv("COOKIE_SECURE") != "false",
+		CorsAllowedOrigin: os.Getenv("CORS_ALLOWED_ORIGIN"),
 	}
 
 }

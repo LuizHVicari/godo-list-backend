@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
@@ -51,6 +52,12 @@ func main() {
 	defer redisClient.Close()
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{envConfig.CorsAllowedOrigin},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 	r.GET("/health", healthCheck)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -65,7 +72,7 @@ func main() {
 	authRepository := auth.NewRepository(redisClient)
 	authService := auth.NewService(userService, authRepository, hasher)
 
-	authHandler := auth.NewHandler(authService)
+	authHandler := auth.NewHandler(authService, envConfig.CookieSecure)
 
 	v1 := r.Group("/v1")
 	authHandler.Register(v1.Group("/auth"))

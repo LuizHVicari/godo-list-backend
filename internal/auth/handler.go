@@ -16,12 +16,14 @@ type service interface {
 }
 
 type Handler struct {
-	service service
+	service      service
+	cookieSecure bool
 }
 
-func NewHandler(service service) *Handler {
+func NewHandler(service service, cookieSecure bool) *Handler {
 	return &Handler{
-		service: service,
+		service:      service,
+		cookieSecure: cookieSecure,
 	}
 }
 
@@ -77,7 +79,7 @@ func (h *Handler) SignIn(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("session_id", session.ID.String(), sessionTtlSeconds, "/", "", true, true)
+	c.SetCookie("session_id", session.ID.String(), sessionTtlSeconds, "/", "", h.cookieSecure, true)
 	c.Status(http.StatusOK)
 }
 
@@ -107,6 +109,6 @@ func (h *Handler) SignOut(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("session_id", "", -1, "/", "", true, true)
+	c.SetCookie("session_id", "", -1, "/", "", h.cookieSecure, true)
 	c.Status(http.StatusNoContent)
 }

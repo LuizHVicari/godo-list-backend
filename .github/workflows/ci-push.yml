@@ -28,6 +28,8 @@ jobs:
     needs: [test, lint]
     if: github.ref == 'refs/heads/dev'
     uses: ./.github/workflows/build-and-publish-binary.yml
+    permissions:
+      contents: write
     with:
       environment: dev
       tag_prefix: dev
@@ -47,6 +49,8 @@ jobs:
     needs: [test, lint]
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-and-publish-binary.yml
+    permissions:
+      contents: write
     with:
       environment: prod
       tag_prefix: v
