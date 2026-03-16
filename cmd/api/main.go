@@ -10,6 +10,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	platformHTTP "github.com/luizhvicari/backend/internal/platform/http"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -59,7 +60,8 @@ func main() {
 		}
 	}()
 
-	r := gin.Default()
+	r := gin.New()
+	r.Use(platformHTTP.RequestLoggerMiddleware(logger))
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{envConfig.CorsAllowedOrigin},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
