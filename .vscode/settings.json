@@ -1,5 +1,6 @@
 {
   "cSpell.words": [
+    "alexedwards",
     "DBSTRING",
     "gin-gonic",
     "GOARCH",
@@ -11,10 +12,12 @@
     "isready",
     "jackc",
     "joho",
+    "pgadmin",
     "PGPASSWORD",
     "pressly",
     "sqlc",
     "SSLMODE",
+    "stdlib",
     "swaggo",
     "tmpl"
   ],

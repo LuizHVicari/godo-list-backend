@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"flag"
 	"log/slog"
 	"net/http"
@@ -12,9 +12,13 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/luizhvicari/backend/docs"
-	"github.com/luizhvicari/backend/pkg/config"
+	"github.com/luizhvicari/backend/internal/auth"
+	"github.com/luizhvicari/backend/internal/platform/config"
+	"github.com/luizhvicari/backend/internal/platform/crypto"
+	platformDb "github.com/luizhvicari/backend/internal/platform/db"
+	"github.com/luizhvicari/backend/internal/user"
 )
 
 // @title Godo List
@@ -22,7 +26,6 @@ import (
 // @description A Simple To-Do List API built with Go, Gin, and PostgreSQL.
 // @BasePath /
 // @schemes http
-
 func main() {
 
 	port := flag.String("port", "8080", "server port")
@@ -33,12 +36,12 @@ func main() {
 	logger := slog.Default()
 
 	databaseUrl := "postgres://" + envConfig.DatabaseUser + ":" + envConfig.DatabasePassword + "@" + envConfig.DatabaseHost + ":" + strconv.Itoa(envConfig.DatabasePort) + "/" + envConfig.DatabaseName
-	conn, err := pgx.Connect(context.Background(), databaseUrl)
+	db, err := sql.Open("pgx", databaseUrl)
 	if err != nil {
 		logger.Error("Unable to connect to database", "error", err)
 		return
 	}
-	defer conn.Close(context.Background())
+	defer db.Close()
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     envConfig.CacheHost + ":" + strconv.Itoa(envConfig.CachePort),
@@ -52,6 +55,20 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	logger.Info("server running", "port", *port)
+
+	queries := platformDb.New(db)
+	hasher := crypto.NewHasher()
+
+	userRepository := user.NewRepository(queries)
+	userService := user.NewService(userRepository, hasher)
+
+	authRepository := auth.NewRepository(redisClient)
+	authService := auth.NewService(userService, authRepository, hasher)
+
+	authHandler := auth.NewHandler(authService)
+
+	v1 := r.Group("/v1")
+	authHandler.Register(v1.Group("/auth"))
 
 	r.Run(":" + *port)
 

@@ -1,4 +1,5 @@
 set windows-shell := ["C:\\Program Files\\Git\\bin\\sh.exe", "-c"]
+set dotenv-load
 
 sqlc_version := "v1.30.0"
 goose_version := "v3.27.0"
@@ -13,7 +14,7 @@ db_password := env_var_or_default("DB_PASSWORD", "postgres")
 db_name := env_var_or_default("DB_NAME", "postgres")
 db_sslmode := env_var_or_default("DB_SSLMODE", "disable")
 migrations_dir := env_var_or_default("MIGRATIONS_DIR", "db/migrations")
-db_url := "postgres://{{db_user}}:{{db_password}}@{{db_host}}:{{db_port}}/{{db_name}}?sslmode={{db_sslmode}}"
+db_url := "postgres://" + db_user + ":" + db_password + "@" + db_host + ":" + db_port + "/" + db_name + "?sslmode=" + db_sslmode
 
 # Compiles and runs the application.
 run port="8080":
@@ -50,7 +51,7 @@ dev-version:
 # Generates Swagger docs from code annotations.
 swagger-init:
     mkdir -p docs
-    go run github.com/swaggo/swag/cmd/swag@{{swag_version}} init -g main.go -d cmd/api,pkg/config -o docs
+    go run github.com/swaggo/swag/cmd/swag@{{swag_version}} init -g main.go -d cmd/api,internal/auth,internal/platform/config -o docs
 
 # Formats Swagger annotations in Go files.
 swagger-fmt:
@@ -82,12 +83,12 @@ build-macos:
 
 # Generates the SQL code from the SQL files.
 sqlc-generate:
-    mkdir -p sql sql/queries
+    mkdir -p db/queries
     go run github.com/sqlc-dev/sqlc/cmd/sqlc@{{sqlc_version}} generate
 
 # Verifies that the generated code is up to date with the SQL files.
 sqlc-verify:
-    mkdir -p sql sql/queries
+    mkdir -p db/queries
     go run github.com/sqlc-dev/sqlc/cmd/sqlc@{{sqlc_version}} verify
 
 # Prints the version of sqlc being used.
@@ -121,12 +122,12 @@ migrate-create name:
 
 # Dumps the current database schema used by sqlc.
 schema-dump:
-    mkdir -p sql sql/queries
-    docker compose exec -T -e PGPASSWORD="{{db_password}}" database pg_dump -h localhost -U "{{db_user}}" -d "{{db_name}}" --schema-only --no-owner --no-privileges > sql/schema.sql
+    mkdir -p db
+    docker compose exec -T -e PGPASSWORD="{{db_password}}" database pg_dump -h localhost -U "{{db_user}}" -d "{{db_name}}" --schema-only --no-owner --no-privileges | grep -v '^[\\]' > db/schema.sql
 
 # Brings up the database and cache services using Docker Compose.
 infra-up:
-    docker compose up -d --build database cache --remove-orphans
+    docker compose up -d --build database cache pgadmin --remove-orphans
 
 # Brings down the database and cache services using Docker Compose.
 infra-down:
