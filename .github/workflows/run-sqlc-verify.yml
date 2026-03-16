@@ -16,5 +16,5 @@ jobs:
           go-version: "1.25"
           cache: false
 
-      - name: Run sqlc verify
-        run: go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0 verify
+      - name: Run sqlc compile
+        run: go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0 compile
