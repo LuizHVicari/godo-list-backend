@@ -1,5 +1,10 @@
+set windows-shell := ["C:\\Program Files\\Git\\bin\\sh.exe", "-c"]
+
 sqlc_version := "v1.30.0"
 goose_version := "v3.27.0"
+air_version := "v1.61.7"
+golangci_lint_version := "v1.64.8"
+swag_version := "v1.16.4"
 
 db_host := env_var_or_default("DB_HOST", "localhost")
 db_port := env_var_or_default("DB_PORT", "5432")
@@ -11,8 +16,69 @@ migrations_dir := env_var_or_default("MIGRATIONS_DIR", "db/migrations")
 db_url := "postgres://{{db_user}}:{{db_password}}@{{db_host}}:{{db_port}}/{{db_name}}?sslmode={{db_sslmode}}"
 
 # Compiles and runs the application.
-run:
-    go run cmd/api/main.go
+run port="8080":
+    go run cmd/api/main.go -port={{port}}
+
+# Runs all Go tests in the project.
+test:
+    go test ./...
+
+# Runs go vet checks for suspicious constructs.
+vet:
+    go vet ./...
+
+# Runs golangci-lint across the project.
+lint:
+    go run github.com/golangci/golangci-lint/cmd/golangci-lint@{{golangci_lint_version}} run ./...
+
+# Runs the standard local quality checks.
+check: vet lint test sqlc-verify
+
+# Prints the version of golangci-lint being used.
+lint-version:
+    go run github.com/golangci/golangci-lint/cmd/golangci-lint@{{golangci_lint_version}} version
+
+# Runs the API with hot reload using Air.
+dev port="8080":
+    mkdir -p tmp
+    SERVER_PORT={{port}} go run github.com/air-verse/air@{{air_version}} -c .air.toml
+
+# Prints the version of Air being used.
+dev-version:
+    go run github.com/air-verse/air@{{air_version}} -v
+
+# Generates Swagger docs from code annotations.
+swagger-init:
+    mkdir -p docs
+    go run github.com/swaggo/swag/cmd/swag@{{swag_version}} init -g main.go -d cmd/api,pkg/config -o docs
+
+# Formats Swagger annotations in Go files.
+swagger-fmt:
+    go run github.com/swaggo/swag/cmd/swag@{{swag_version}} fmt -g cmd/api/main.go
+
+# Prints the version of swag being used.
+swagger-version:
+    go run github.com/swaggo/swag/cmd/swag@{{swag_version}} --version
+
+# Compiles the application and outputs the binary to the bin directory.
+build:
+    mkdir -p bin
+    go build -o bin/api cmd/api/main.go
+
+# Compiles the application for Windows and outputs the binary to the bin directory.
+build-windows:
+    mkdir -p bin
+    GOOS=windows GOARCH=amd64 go build -o bin/api.exe cmd/api/main.go
+
+# Compiles the application for Linux and outputs the binary to the bin directory.
+build-linux:
+    mkdir -p bin
+    GOOS=linux GOARCH=amd64 go build -o bin/api cmd/api/main.go
+
+# Compiles the application for macOS and outputs the binary to the bin directory.
+build-macos:
+    mkdir -p bin
+    GOOS=darwin GOARCH=amd64 go build -o bin/api cmd/api/main.go
 
 # Generates the SQL code from the SQL files.
 sqlc-generate:

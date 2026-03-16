@@ -1,0 +1,25 @@
+basePath: /
+info:
+  contact: {}
+  description: API for Webinar backend services.
+  title: Webinar Backend API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Returns API health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+schemes:
+- http
+swagger: "2.0"

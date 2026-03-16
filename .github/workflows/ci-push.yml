@@ -1,0 +1,46 @@
+name: CI - Push
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  test:
+    uses: ./.github/workflows/run-tests.yml
+
+  lint:
+    uses: ./.github/workflows/run-lint.yml
+
+  publish-docker-dev:
+    needs: [test, lint]
+    if: github.ref == 'refs/heads/dev'
+    uses: ./.github/workflows/build-and-publish.yml
+    with:
+      environment: dev
+      tag_prefix: dev
+
+  publish-binary-dev:
+    needs: [test, lint]
+    if: github.ref == 'refs/heads/dev'
+    uses: ./.github/workflows/build-and-publish-binary.yml
+    with:
+      environment: dev
+      tag_prefix: dev
+
+  publish-docker-prod:
+    needs: [test, lint]
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/build-and-publish.yml
+    with:
+      environment: prod
+      tag_prefix: v
+
+  publish-binary-prod:
+    needs: [test, lint]
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/build-and-publish-binary.yml
+    with:
+      environment: prod
+      tag_prefix: v

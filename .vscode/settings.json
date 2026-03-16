@@ -1,12 +1,34 @@
 {
   "cSpell.words": [
     "DBSTRING",
+    "gin-gonic",
+    "GOARCH",
+    "Godo",
+    "godoc",
     "godotenv",
+    "golangci",
+    "healthcheck",
+    "isready",
+    "jackc",
     "joho",
     "PGPASSWORD",
     "pressly",
     "sqlc",
-    "SSLMODE"
+    "SSLMODE",
+    "swaggo",
+    "tmpl"
+  ],
+  "cSpell.ignorePaths": [
+    "package-lock.json",
+    "node_modules",
+    "vscode-extension",
+    ".git/{info,lfs,logs,refs,objects}/**",
+    ".git/{index,*refs,*HEAD}",
+    ".vscode",
+    ".vscode-insiders",
+    ".gitignore",
+    ".env",
+    "go.mod"
   ],
   "editor.tabSize": 4,
   "[json]": {
