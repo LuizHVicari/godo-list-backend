@@ -40,20 +40,20 @@ func NewService(repo repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) CreateStep(ctx context.Context, params CreateStepParams) error {
+func (s *Service) CreateStep(ctx context.Context, params CreateStepParams) (*Step, error) {
 	owned, err := s.repo.IsProjectOwnedByUser(ctx, params.ProjectID, params.OwnerID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !owned {
-		return ErrorStepNotFound
+		return nil, ErrorStepNotFound
 	}
 
 	position := params.Position
 	if position == nil {
 		last, err := s.repo.GetLastStepPositionByProjectID(ctx, params.ProjectID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		next := last + 1
 		position = &next
@@ -61,15 +61,18 @@ func (s *Service) CreateStep(ctx context.Context, params CreateStepParams) error
 
 	taken, err := s.repo.IsStepPositionTaken(ctx, params.ProjectID, *position, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if taken {
-		return ErrorStepPositionTaken
+		return nil, ErrorStepPositionTaken
 	}
 
 	now := time.Now()
 	step := NewStep(uuid.New(), params.ProjectID, params.Name, *position, now, now)
-	return s.repo.CreateStep(ctx, *step)
+	if err := s.repo.CreateStep(ctx, *step); err != nil {
+		return nil, err
+	}
+	return step, nil
 }
 
 func (s *Service) GetStepByID(ctx context.Context, id, projectID, ownerID uuid.UUID) (*Step, error) {
@@ -91,8 +94,13 @@ func (s *Service) GetStepByID(ctx context.Context, id, projectID, ownerID uuid.U
 	return step, nil
 }
 
-func (s *Service) UpdateStep(ctx context.Context, id, projectID, ownerID uuid.UUID, params UpdateStepParams) error {
-	owned, err := s.repo.IsProjectOwnedByUser(ctx, projectID, ownerID)
+func (s *Service) UpdateStep(ctx context.Context, id, ownerID uuid.UUID, params UpdateStepParams) error {
+	step, err := s.repo.GetStepByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	owned, err := s.repo.IsProjectOwnedByUser(ctx, step.ProjectID, ownerID)
 	if err != nil {
 		return err
 	}
@@ -100,16 +108,8 @@ func (s *Service) UpdateStep(ctx context.Context, id, projectID, ownerID uuid.UU
 		return ErrorStepNotFound
 	}
 
-	step, err := s.repo.GetStepByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if step.ProjectID != projectID {
-		return ErrorStepNotFound
-	}
-
 	if params.Position != step.Position {
-		taken, err := s.repo.IsStepPositionTaken(ctx, projectID, params.Position, &id)
+		taken, err := s.repo.IsStepPositionTaken(ctx, step.ProjectID, params.Position, &id)
 		if err != nil {
 			return err
 		}
@@ -125,8 +125,13 @@ func (s *Service) UpdateStep(ctx context.Context, id, projectID, ownerID uuid.UU
 	return s.repo.UpdateStep(ctx, *step)
 }
 
-func (s *Service) DeleteStep(ctx context.Context, id, projectID, ownerID uuid.UUID) error {
-	owned, err := s.repo.IsProjectOwnedByUser(ctx, projectID, ownerID)
+func (s *Service) DeleteStep(ctx context.Context, id, ownerID uuid.UUID) error {
+	step, err := s.repo.GetStepByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	owned, err := s.repo.IsProjectOwnedByUser(ctx, step.ProjectID, ownerID)
 	if err != nil {
 		return err
 	}
@@ -134,13 +139,6 @@ func (s *Service) DeleteStep(ctx context.Context, id, projectID, ownerID uuid.UU
 		return ErrorStepNotFound
 	}
 
-	step, err := s.repo.GetStepByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if step.ProjectID != projectID {
-		return ErrorStepNotFound
-	}
 	return s.repo.DeleteStep(ctx, id)
 }
 

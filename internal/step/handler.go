@@ -18,10 +18,10 @@ var errMapper = platformHTTP.NewErrorMapper(
 )
 
 type service interface {
-	CreateStep(ctx context.Context, params CreateStepParams) error
+	CreateStep(ctx context.Context, params CreateStepParams) (*Step, error)
 	GetStepByID(ctx context.Context, id, projectID, ownerID uuid.UUID) (*Step, error)
-	UpdateStep(ctx context.Context, id, projectID, ownerID uuid.UUID, params UpdateStepParams) error
-	DeleteStep(ctx context.Context, id, projectID, ownerID uuid.UUID) error
+	UpdateStep(ctx context.Context, id, ownerID uuid.UUID, params UpdateStepParams) error
+	DeleteStep(ctx context.Context, id, ownerID uuid.UUID) error
 	ListStepsByProjectID(ctx context.Context, projectID, ownerID uuid.UUID, filter ListStepsFilter) (*ListStepsResult, error)
 	RepositionSteps(ctx context.Context, params RepositionStepsParams) error
 }
@@ -34,54 +34,60 @@ func NewHandler(service service) *Handler {
 	return &Handler{service: service}
 }
 
+// Register registers flat mutation routes: POST, PUT /:id, DELETE /:id, PUT /reposition
 func (h *Handler) Register(rg *gin.RouterGroup) {
 	rg.POST("", h.Create)
+	rg.PUT("/reposition", h.Reposition)
+	rg.PUT("/:id", h.Update)
+	rg.DELETE("/:id", h.Delete)
+}
+
+// RegisterReads registers nested read routes: GET (list), GET /:step_id
+func (h *Handler) RegisterReads(rg *gin.RouterGroup) {
 	rg.GET("", h.List)
 	rg.GET("/:step_id", h.GetByID)
-	rg.PUT("/:step_id", h.Update)
-	rg.DELETE("/:step_id", h.Delete)
-	rg.PUT("/reposition", h.Reposition)
 }
 
 // Create godoc
 // @Summary Create a new step
 // @Tags steps
 // @Accept json
-// @Param project_id path string true "Project ID"
+// @Produce json
 // @Param request body CreateStepRequest true "Step data"
-// @Success 201
+// @Success 201 {object} StepResponse
 // @Failure 400
 // @Failure 401
 // @Failure 404
 // @Failure 409
 // @Failure 500
-// @Router /v1/projects/{project_id}/steps [post]
+// @Router /v1/steps [post]
 func (h *Handler) Create(c *gin.Context) {
-	projectID, err := uuid.Parse(c.Param("project_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project_id"})
-		return
-	}
-
 	var req CreateStepRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	projectID, err := uuid.Parse(req.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project_id"})
+		return
+	}
+
 	session := c.MustGet("session").(*auth.Session)
 
-	if err := h.service.CreateStep(c.Request.Context(), CreateStepParams{
+	step, err := h.service.CreateStep(c.Request.Context(), CreateStepParams{
 		ProjectID: projectID,
 		OwnerID:   session.UserId,
 		Name:      req.Name,
 		Position:  req.Position,
-	}); err != nil {
+	})
+	if err != nil {
 		errMapper.Respond(c, err, "failed to create step")
 		return
 	}
 
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, toResponse(step))
 }
 
 // List godoc
@@ -169,7 +175,6 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Summary Update a step
 // @Tags steps
 // @Accept json
-// @Param project_id path string true "Project ID"
 // @Param id path string true "Step ID"
 // @Param request body UpdateStepRequest true "Step data"
 // @Success 204
@@ -178,15 +183,9 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Failure 404
 // @Failure 409
 // @Failure 500
-// @Router /v1/projects/{project_id}/steps/{id} [put]
+// @Router /v1/steps/{id} [put]
 func (h *Handler) Update(c *gin.Context) {
-	projectID, err := uuid.Parse(c.Param("project_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project_id"})
-		return
-	}
-
-	id, err := uuid.Parse(c.Param("step_id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid step id"})
 		return
@@ -200,7 +199,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	if err := h.service.UpdateStep(c.Request.Context(), id, projectID, session.UserId, UpdateStepParams(req)); err != nil {
+	if err := h.service.UpdateStep(c.Request.Context(), id, session.UserId, UpdateStepParams(req)); err != nil {
 		errMapper.Respond(c, err, "failed to update step")
 		return
 	}
@@ -211,22 +210,15 @@ func (h *Handler) Update(c *gin.Context) {
 // Delete godoc
 // @Summary Delete a step
 // @Tags steps
-// @Param project_id path string true "Project ID"
 // @Param id path string true "Step ID"
 // @Success 204
 // @Failure 400
 // @Failure 401
 // @Failure 404
 // @Failure 500
-// @Router /v1/projects/{project_id}/steps/{id} [delete]
+// @Router /v1/steps/{id} [delete]
 func (h *Handler) Delete(c *gin.Context) {
-	projectID, err := uuid.Parse(c.Param("project_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project_id"})
-		return
-	}
-
-	id, err := uuid.Parse(c.Param("step_id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid step id"})
 		return
@@ -234,7 +226,7 @@ func (h *Handler) Delete(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	if err := h.service.DeleteStep(c.Request.Context(), id, projectID, session.UserId); err != nil {
+	if err := h.service.DeleteStep(c.Request.Context(), id, session.UserId); err != nil {
 		errMapper.Respond(c, err, "failed to delete step")
 		return
 	}
@@ -246,7 +238,6 @@ func (h *Handler) Delete(c *gin.Context) {
 // @Summary Reposition steps within a project
 // @Tags steps
 // @Accept json
-// @Param project_id path string true "Project ID"
 // @Param request body RepositionStepsRequest true "Steps with new positions"
 // @Success 204
 // @Failure 400
@@ -254,17 +245,17 @@ func (h *Handler) Delete(c *gin.Context) {
 // @Failure 404
 // @Failure 422 {object} map[string]string
 // @Failure 500
-// @Router /v1/projects/{project_id}/steps/reposition [put]
+// @Router /v1/steps/reposition [put]
 func (h *Handler) Reposition(c *gin.Context) {
-	projectID, err := uuid.Parse(c.Param("project_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project_id"})
-		return
-	}
-
 	var req RepositionStepsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	projectID, err := uuid.Parse(req.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project_id"})
 		return
 	}
 

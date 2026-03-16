@@ -31,8 +31,11 @@ definitions:
         type: integer
       priority:
         $ref: '#/definitions/item.ItemPriority'
+      step_id:
+        type: string
     required:
     - name
+    - step_id
     type: object
   item.ItemPriority:
     enum:
@@ -95,8 +98,11 @@ definitions:
           $ref: '#/definitions/item.ItemRepositionItem'
         minItems: 1
         type: array
+      step_id:
+        type: string
     required:
     - items
+    - step_id
     type: object
   item.UpdateItemRequest:
     properties:
@@ -110,6 +116,8 @@ definitions:
         type: integer
       priority:
         $ref: '#/definitions/item.ItemPriority'
+      step_id:
+        type: string
     required:
     - name
     - position
@@ -162,8 +170,11 @@ definitions:
         type: string
       position:
         type: integer
+      project_id:
+        type: string
     required:
     - name
+    - project_id
     type: object
   step.ListStepsResponse:
     properties:
@@ -176,12 +187,15 @@ definitions:
     type: object
   step.RepositionStepsRequest:
     properties:
+      project_id:
+        type: string
       steps:
         items:
           $ref: '#/definitions/step.StepRepositionItem'
         minItems: 1
         type: array
     required:
+    - project_id
     - steps
     type: object
   step.StepRepositionItem:
@@ -322,6 +336,121 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /v1/items:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Item data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/item.CreateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/item.ItemResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+      summary: Create a new item
+      tags:
+      - items
+  /v1/items/{id}:
+    delete:
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Delete an item
+      tags:
+      - items
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Item data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/item.UpdateItemRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+      summary: Update an item
+      tags:
+      - items
+  /v1/items/reposition:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Items with new positions
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/item.RepositionItemsRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+      summary: Reposition items within a step
+      tags:
+      - items
   /v1/projects:
     get:
       parameters:
@@ -371,9 +500,13 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/project.CreateProjectRequest'
+      produces:
+      - application/json
       responses:
         "201":
           description: Created
+          schema:
+            $ref: '#/definitions/project.ProjectResponse'
         "400":
           description: Bad Request
         "401":
@@ -503,62 +636,7 @@ paths:
       summary: List steps for a project
       tags:
       - steps
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Step data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/step.CreateStepRequest'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "500":
-          description: Internal Server Error
-      summary: Create a new step
-      tags:
-      - steps
   /v1/projects/{project_id}/steps/{id}:
-    delete:
-      parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Step ID
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "500":
-          description: Internal Server Error
-      summary: Delete a step
-      tags:
-      - steps
     get:
       parameters:
       - description: Project ID
@@ -587,40 +665,6 @@ paths:
         "500":
           description: Internal Server Error
       summary: Get a step by ID
-      tags:
-      - steps
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Step ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Step data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/step.UpdateStepRequest'
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "500":
-          description: Internal Server Error
-      summary: Update a step
       tags:
       - steps
   /v1/projects/{project_id}/steps/{step_id}/items:
@@ -674,74 +718,7 @@ paths:
       summary: List items for a step
       tags:
       - items
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Step ID
-        in: path
-        name: step_id
-        required: true
-        type: string
-      - description: Item data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/item.CreateItemRequest'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "409":
-          description: Conflict
-        "500":
-          description: Internal Server Error
-      summary: Create a new item
-      tags:
-      - items
   /v1/projects/{project_id}/steps/{step_id}/items/{id}:
-    delete:
-      parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Step ID
-        in: path
-        name: step_id
-        required: true
-        type: string
-      - description: Item ID
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "500":
-          description: Internal Server Error
-      summary: Delete an item
-      tags:
-      - items
     get:
       parameters:
       - description: Project ID
@@ -777,31 +754,74 @@ paths:
       summary: Get an item by ID
       tags:
       - items
-    put:
+  /v1/steps:
+    post:
       consumes:
       - application/json
       parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Step ID
-        in: path
-        name: step_id
-        required: true
-        type: string
-      - description: Item ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Item data
+      - description: Step data
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/item.UpdateItemRequest'
+          $ref: '#/definitions/step.CreateStepRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/step.StepResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "409":
+          description: Conflict
+        "500":
+          description: Internal Server Error
+      summary: Create a new step
+      tags:
+      - steps
+  /v1/steps/{id}:
+    delete:
+      parameters:
+      - description: Step ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Delete a step
+      tags:
+      - steps
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Step ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Step data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/step.UpdateStepRequest'
       responses:
         "204":
           description: No Content
@@ -815,60 +835,14 @@ paths:
           description: Conflict
         "500":
           description: Internal Server Error
-      summary: Update an item
+      summary: Update a step
       tags:
-      - items
-  /v1/projects/{project_id}/steps/{step_id}/items/reposition:
+      - steps
+  /v1/steps/reposition:
     put:
       consumes:
       - application/json
       parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Step ID
-        in: path
-        name: step_id
-        required: true
-        type: string
-      - description: Items with new positions
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/item.RepositionItemsRequest'
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not Found
-        "422":
-          description: Unprocessable Entity
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-      summary: Reposition items within a step
-      tags:
-      - items
-  /v1/projects/{project_id}/steps/reposition:
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
       - description: Steps with new positions
         in: body
         name: request

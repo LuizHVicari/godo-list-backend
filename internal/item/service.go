@@ -29,6 +29,7 @@ type CreateItemParams struct {
 }
 
 type UpdateItemParams struct {
+	StepID      *uuid.UUID
 	Name        string
 	Description *string
 	Priority    ItemPriority
@@ -44,13 +45,13 @@ func NewService(repo repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) CreateItem(ctx context.Context, params CreateItemParams) error {
+func (s *Service) CreateItem(ctx context.Context, params CreateItemParams) (*Item, error) {
 	owned, err := s.repo.IsStepInOwnedProject(ctx, params.StepID, params.OwnerID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !owned {
-		return ErrorItemNotFound
+		return nil, ErrorItemNotFound
 	}
 
 	if params.Priority == "" {
@@ -61,7 +62,7 @@ func (s *Service) CreateItem(ctx context.Context, params CreateItemParams) error
 	if position == nil {
 		last, err := s.repo.GetLastItemPositionByStepID(ctx, params.StepID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		next := last + 1
 		position = &next
@@ -69,15 +70,18 @@ func (s *Service) CreateItem(ctx context.Context, params CreateItemParams) error
 
 	taken, err := s.repo.IsItemPositionTaken(ctx, params.StepID, *position, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if taken {
-		return ErrorItemPositionTaken
+		return nil, ErrorItemPositionTaken
 	}
 
 	now := time.Now()
 	item := NewItem(uuid.New(), params.Name, params.Description, params.Priority, *position, params.StepID, now, now)
-	return s.repo.CreateItem(ctx, *item)
+	if err := s.repo.CreateItem(ctx, *item); err != nil {
+		return nil, err
+	}
+	return item, nil
 }
 
 func (s *Service) GetItemByID(ctx context.Context, id, stepID, ownerID uuid.UUID) (*Item, error) {
@@ -99,8 +103,13 @@ func (s *Service) GetItemByID(ctx context.Context, id, stepID, ownerID uuid.UUID
 	return item, nil
 }
 
-func (s *Service) UpdateItem(ctx context.Context, id, stepID, ownerID uuid.UUID, params UpdateItemParams) error {
-	owned, err := s.repo.IsStepInOwnedProject(ctx, stepID, ownerID)
+func (s *Service) UpdateItem(ctx context.Context, id, ownerID uuid.UUID, params UpdateItemParams) error {
+	item, err := s.repo.GetItemByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	owned, err := s.repo.IsStepInOwnedProject(ctx, item.StepID, ownerID)
 	if err != nil {
 		return err
 	}
@@ -108,16 +117,20 @@ func (s *Service) UpdateItem(ctx context.Context, id, stepID, ownerID uuid.UUID,
 		return ErrorItemNotFound
 	}
 
-	item, err := s.repo.GetItemByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if item.StepID != stepID {
-		return ErrorItemNotFound
+	targetStepID := item.StepID
+	if params.StepID != nil && *params.StepID != item.StepID {
+		newOwned, err := s.repo.IsStepInOwnedProject(ctx, *params.StepID, ownerID)
+		if err != nil {
+			return err
+		}
+		if !newOwned {
+			return ErrorItemNotFound
+		}
+		targetStepID = *params.StepID
 	}
 
-	if params.Position != item.Position {
-		taken, err := s.repo.IsItemPositionTaken(ctx, stepID, params.Position, &id)
+	if targetStepID != item.StepID || params.Position != item.Position {
+		taken, err := s.repo.IsItemPositionTaken(ctx, targetStepID, params.Position, &id)
 		if err != nil {
 			return err
 		}
@@ -126,6 +139,7 @@ func (s *Service) UpdateItem(ctx context.Context, id, stepID, ownerID uuid.UUID,
 		}
 	}
 
+	item.StepID = targetStepID
 	item.Name = params.Name
 	item.Description = params.Description
 	item.Priority = params.Priority
@@ -135,8 +149,13 @@ func (s *Service) UpdateItem(ctx context.Context, id, stepID, ownerID uuid.UUID,
 	return s.repo.UpdateItem(ctx, *item)
 }
 
-func (s *Service) DeleteItem(ctx context.Context, id, stepID, ownerID uuid.UUID) error {
-	owned, err := s.repo.IsStepInOwnedProject(ctx, stepID, ownerID)
+func (s *Service) DeleteItem(ctx context.Context, id, ownerID uuid.UUID) error {
+	item, err := s.repo.GetItemByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	owned, err := s.repo.IsStepInOwnedProject(ctx, item.StepID, ownerID)
 	if err != nil {
 		return err
 	}
@@ -144,13 +163,6 @@ func (s *Service) DeleteItem(ctx context.Context, id, stepID, ownerID uuid.UUID)
 		return ErrorItemNotFound
 	}
 
-	item, err := s.repo.GetItemByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if item.StepID != stepID {
-		return ErrorItemNotFound
-	}
 	return s.repo.DeleteItem(ctx, id)
 }
 

@@ -105,8 +105,10 @@ func main() {
 
 	authed := v1.Group("", auth.Middleware(authService))
 	projectHandler.Register(authed.Group("/projects"))
-	stepHandler.Register(authed.Group("/projects/:project_id/steps"))
-	itemHandler.Register(authed.Group("/projects/:project_id/steps/:step_id/items"))
+	stepHandler.Register(authed.Group("/steps"))
+	stepHandler.RegisterReads(authed.Group("/projects/:project_id/steps"))
+	itemHandler.Register(authed.Group("/items"))
+	itemHandler.RegisterReads(authed.Group("/projects/:project_id/steps/:step_id/items"))
 
 	err = r.Run(":" + *port)
 	if err != nil {

@@ -69,12 +69,13 @@ UPDATE todo.items SET position = $3, updated_at = $4 WHERE id = $1 AND step_id =
 
 -- name: UpdateItemByID :exec
 UPDATE todo.items SET
-    name = $2,
-    description = $3,
-    priority = $4,
-    position = $5,
-    is_completed = $6,
-    updated_at = $7
+    step_id = $2,
+    name = $3,
+    description = $4,
+    priority = $5,
+    position = $6,
+    is_completed = $7,
+    updated_at = $8
 WHERE id = $1;
 
 -- name: DeleteItemByID :exec

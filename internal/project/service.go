@@ -34,10 +34,13 @@ func NewService(repo repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) CreateProject(ctx context.Context, params CreateProjectParams) error {
+func (s *Service) CreateProject(ctx context.Context, params CreateProjectParams) (*Project, error) {
 	now := time.Now()
 	project := NewProject(uuid.New(), params.Name, params.Description, params.OwnerID, now, now)
-	return s.repo.CreateProject(ctx, *project)
+	if err := s.repo.CreateProject(ctx, *project); err != nil {
+		return nil, err
+	}
+	return project, nil
 }
 
 func (s *Service) GetProjectById(ctx context.Context, id, ownerID uuid.UUID) (*Project, error) {

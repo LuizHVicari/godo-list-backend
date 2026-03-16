@@ -3,8 +3,9 @@ package step
 import "time"
 
 type CreateStepRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Position *int32 `json:"position"`
+	ProjectID string `json:"project_id" binding:"required,uuid"`
+	Name      string `json:"name" binding:"required"`
+	Position  *int32 `json:"position"`
 }
 
 type UpdateStepRequest struct {
@@ -19,7 +20,8 @@ type StepRepositionItem struct {
 }
 
 type RepositionStepsRequest struct {
-	Steps []StepRepositionItem `json:"steps" binding:"required,min=1"`
+	ProjectID string               `json:"project_id" binding:"required,uuid"`
+	Steps     []StepRepositionItem `json:"steps" binding:"required,min=1"`
 }
 
 type ListStepsRequest struct {

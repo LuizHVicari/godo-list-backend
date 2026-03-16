@@ -60,6 +60,7 @@ func (r *Repository) GetItemByID(ctx context.Context, id uuid.UUID) (*Item, erro
 func (r *Repository) UpdateItem(ctx context.Context, item Item) error {
 	return r.queries.UpdateItemByID(ctx, db.UpdateItemByIDParams{
 		ID:          item.ID,
+		StepID:      item.StepID,
 		Name:        item.Name,
 		Description: sql.NullString{String: ptrVal(item.Description), Valid: item.Description != nil},
 		Priority:    db.TodoItemPriority(item.Priority),

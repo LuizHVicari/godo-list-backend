@@ -3,6 +3,7 @@ package item
 import "time"
 
 type CreateItemRequest struct {
+	StepID      string       `json:"step_id" binding:"required,uuid"`
 	Name        string       `json:"name" binding:"required"`
 	Description *string      `json:"description"`
 	Priority    ItemPriority `json:"priority"`
@@ -10,6 +11,7 @@ type CreateItemRequest struct {
 }
 
 type UpdateItemRequest struct {
+	StepID      *string      `json:"step_id"`
 	Name        string       `json:"name" binding:"required"`
 	Description *string      `json:"description"`
 	Priority    ItemPriority `json:"priority"`
@@ -23,7 +25,8 @@ type ItemRepositionItem struct {
 }
 
 type RepositionItemsRequest struct {
-	Items []ItemRepositionItem `json:"items" binding:"required,min=1"`
+	StepID string               `json:"step_id" binding:"required,uuid"`
+	Items  []ItemRepositionItem `json:"items" binding:"required,min=1"`
 }
 
 type ListItemsRequest struct {

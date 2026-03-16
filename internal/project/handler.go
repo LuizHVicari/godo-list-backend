@@ -16,7 +16,7 @@ var errMapper = platformHTTP.NewErrorMapper(
 )
 
 type service interface {
-	CreateProject(ctx context.Context, params CreateProjectParams) error
+	CreateProject(ctx context.Context, params CreateProjectParams) (*Project, error)
 	GetProjectById(ctx context.Context, id, ownerID uuid.UUID) (*Project, error)
 	UpdateProject(ctx context.Context, id, ownerID uuid.UUID, params UpdateProjectParams) error
 	DeleteProject(ctx context.Context, id, ownerID uuid.UUID) error
@@ -43,8 +43,9 @@ func (h *Handler) Register(rg *gin.RouterGroup) {
 // @Summary Create a new project
 // @Tags projects
 // @Accept json
+// @Produce json
 // @Param request body CreateProjectRequest true "Project data"
-// @Success 201
+// @Success 201 {object} ProjectResponse
 // @Failure 400
 // @Failure 401
 // @Failure 500
@@ -58,16 +59,17 @@ func (h *Handler) Create(c *gin.Context) {
 
 	session := c.MustGet("session").(*auth.Session)
 
-	if err := h.service.CreateProject(c.Request.Context(), CreateProjectParams{
+	project, err := h.service.CreateProject(c.Request.Context(), CreateProjectParams{
 		Name:        req.Name,
 		Description: req.Description,
 		OwnerID:     session.UserId,
-	}); err != nil {
+	})
+	if err != nil {
 		errMapper.Respond(c, err, "failed to create project")
 		return
 	}
 
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, toResponse(project))
 }
 
 // List godoc
