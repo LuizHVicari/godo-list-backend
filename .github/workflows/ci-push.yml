@@ -13,8 +13,11 @@ jobs:
   lint:
     uses: ./.github/workflows/run-lint.yml
 
+  sqlc-verify:
+    uses: ./.github/workflows/run-sqlc-verify.yml
+
   publish-docker-dev:
-    needs: [test, lint]
+    needs: [test, lint, sqlc-verify]
     if: github.ref == 'refs/heads/dev'
     uses: ./.github/workflows/build-and-publish.yml
     permissions:
@@ -25,7 +28,7 @@ jobs:
       tag_prefix: dev
 
   publish-binary-dev:
-    needs: [test, lint]
+    needs: [test, lint, sqlc-verify]
     if: github.ref == 'refs/heads/dev'
     uses: ./.github/workflows/build-and-publish-binary.yml
     permissions:
@@ -35,7 +38,7 @@ jobs:
       tag_prefix: dev
 
   publish-docker-prod:
-    needs: [test, lint]
+    needs: [test, lint, sqlc-verify]
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-and-publish.yml
     permissions:
@@ -46,7 +49,7 @@ jobs:
       tag_prefix: v
 
   publish-binary-prod:
-    needs: [test, lint]
+    needs: [test, lint, sqlc-verify]
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-and-publish-binary.yml
     permissions:

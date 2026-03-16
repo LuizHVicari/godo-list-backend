@@ -12,3 +12,6 @@ jobs:
 
   lint:
     uses: ./.github/workflows/run-lint.yml
+
+  sqlc-verify:
+    uses: ./.github/workflows/run-sqlc-verify.yml

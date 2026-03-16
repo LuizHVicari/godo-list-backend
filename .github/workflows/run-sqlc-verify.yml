@@ -1,0 +1,20 @@
+name: Run SQLC Verify
+
+on:
+  workflow_call:
+
+jobs:
+  sqlc-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+          cache: false
+
+      - name: Run sqlc verify
+        run: go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0 verify
