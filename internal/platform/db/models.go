@@ -73,6 +73,15 @@ type GooseDbVersion struct {
 	Tstamp    time.Time
 }
 
+type TodoItemComment struct {
+	ID        uuid.UUID
+	ItemID    uuid.UUID
+	AuthorID  uuid.UUID
+	Content   string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type TodoItem struct {
 	ID          uuid.UUID
 	StepID      uuid.UUID

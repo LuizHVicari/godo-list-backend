@@ -20,6 +20,7 @@ import (
 	"github.com/luizhvicari/backend/internal/platform/config"
 	"github.com/luizhvicari/backend/internal/platform/crypto"
 	platformDb "github.com/luizhvicari/backend/internal/platform/db"
+	"github.com/luizhvicari/backend/internal/comment"
 	"github.com/luizhvicari/backend/internal/item"
 	"github.com/luizhvicari/backend/internal/project"
 	"github.com/luizhvicari/backend/internal/step"
@@ -100,6 +101,10 @@ func main() {
 	itemService := item.NewService(itemRepository)
 	itemHandler := item.NewHandler(itemService)
 
+	commentRepository := comment.NewRepository(queries)
+	commentService := comment.NewService(commentRepository)
+	commentHandler := comment.NewHandler(commentService)
+
 	v1 := r.Group("/v1")
 	authHandler.Register(v1.Group("/auth"))
 
@@ -109,6 +114,8 @@ func main() {
 	stepHandler.RegisterReads(authed.Group("/projects/:project_id/steps"))
 	itemHandler.Register(authed.Group("/items"))
 	itemHandler.RegisterReads(authed.Group("/projects/:project_id/steps/:step_id/items"))
+	commentHandler.Register(authed.Group("/comments"))
+	commentHandler.RegisterReads(authed.Group("/projects/:project_id/steps/:step_id/items/:item_id/comments"))
 
 	err = r.Run(":" + *port)
 	if err != nil {
